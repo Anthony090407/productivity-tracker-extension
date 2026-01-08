@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Productivity Analytics Dashboard</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .card {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      width: 300px;
+    }
+
+    canvas {
+      max-width: 450px;
+      max-height: 450px;
+    }
+
+    .stats {
+      font-size: 18px;
+      margin-top: 15px;
+    }
+
+    .productive {
+      color: #2ecc71;
+      font-weight: bold;
+    }
+
+    .unproductive {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+
+    footer {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>📊 Weekly Productivity Dashboard</h1>
+  <p>Visual analytics of your browsing habits</p>
+
+  <div class="container">
+    <div class="card">
+      <canvas id="chart"></canvas>
+      <div class="stats" id="summary"></div>
+    </div>
+  </div>
+
+  <footer>
+    Data updates automatically every 30 seconds
+  </footer>
+
+  <script>
+    let chartInstance = null;
+
+    async function loadReport() {
+      const res = await fetch('http://localhost:5000/weekly-report');
+      const data = await res.json();
+
+      const productiveMin = (data.productive / 60000).toFixed(2);
+      const unproductiveMin = (data.unproductive / 60000).toFixed(2);
+      const totalMin = (data.total / 60000).toFixed(2);
+
+      const ctx = document.getElementById('chart').getContext('2d');
+
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Productive', 'Unproductive'],
+          datasets: [{
+            data: [data.productive, data.unproductive],
+            backgroundColor: ['#2ecc71', '#e74c3c'],
+            borderWidth: 2,
+            hoverOffset: 20
+          }]
+        },
+        options: {
+          responsive: true,
+          cutout: '65%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                font: { size: 14 }
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const value = (context.raw / 60000).toFixed(2);
+                  return `${context.label}: ${value} min`;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      document.getElementById('summary').innerHTML = `
+        <p class="productive">✔ Productive: ${productiveMin} min</p>
+        <p class="unproductive">✘ Unproductive: ${unproductiveMin} min</p>
+        <hr>
+        <p><strong>Total Time:</strong> ${totalMin} min</p>
+      `;
+    }
+
+    loadReport();
+    setInterval(loadReport, 30000); // auto-refresh every 30 seconds
+  </script>
+</body>
+</html>
